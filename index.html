@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stakeholder Mapping Tool</title>
+    <!-- Tailwind CSS for modern styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Lucide Icons for UI elements -->
+    <script src="https://unpkg.com/lucide-react@latest/dist/umd/lucide-react.js"></script>
+    <!-- Your Custom Stylesheet -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="bg-slate-100 text-slate-800 antialiased">
+
+    <!-- App Wrapper -->
+    <div id="app-wrapper">
+
+        <!-- ====================================================== -->
+        <!-- ============== AUTHENTICATION SCREEN ================= -->
+        <!-- ====================================================== -->
+        <div id="auth-screen" class="min-h-screen flex items-center justify-center bg-slate-200">
+            <div class="w-full max-w-md p-8 bg-white rounded-xl shadow-lg space-y-6">
+                <div>
+                    <h2 id="auth-title" class="text-center text-3xl font-bold tracking-tight text-slate-900">Sign in to your account</h2>
+                </div>
+                <div id="auth-error" class="hidden p-3 bg-red-100 text-red-700 rounded-md text-sm"></div>
+                <form id="auth-form" class="space-y-6">
+                    <input type="email" id="email" placeholder="Email address" required class="w-full px-4 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-sky-500">
+                    <input type="password" id="password" placeholder="Password" required class="w-full px-4 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-sky-500">
+                    <button type="submit" id="auth-button" class="w-full bg-sky-600 text-white font-semibold py-2 px-4 rounded-md hover:bg-sky-700 transition-colors duration-300">Sign In</button>
+                </form>
+                <p class="text-center text-sm text-slate-600">
+                    <span id="auth-toggle-text">Don't have an account?</span>
+                    <button id="auth-toggle-button" class="font-medium text-sky-600 hover:text-sky-500">Sign Up</button>
+                </p>
+                 <div class="text-center text-xs text-slate-400">Your User ID will appear here after login.</div>
+                 <div id="user-id-display" class="text-center text-xs text-slate-500 font-mono break-all h-8"></div>
+            </div>
+        </div>
+
+        <!-- ====================================================== -->
+        <!-- ================= MAIN APP SCREEN ==================== -->
+        <!-- ====================================================== -->
+        <div id="app-screen" class="hidden">
+            <div class="flex h-screen bg-slate-50">
+                <!-- Sidebar for Deals -->
+                <aside class="w-80 bg-white border-r border-slate-200 flex flex-col">
+                    <div class="p-4 border-b border-slate-200 flex justify-between items-center">
+                        <h1 class="text-xl font-bold text-slate-900">Deals</h1>
+                        <button id="logout-button" class="text-slate-500 hover:text-sky-600" title="Logout">
+                           <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-log-out"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>
+                        </button>
+                    </div>
+                    <div class="flex-grow p-2 overflow-y-auto" id="deals-list">
+                        <!-- Deals will be populated by JS -->
+                    </div>
+                    <div class="p-4 border-t border-slate-200">
+                        <button id="add-deal-btn" class="w-full bg-sky-600 text-white font-semibold py-2 px-4 rounded-md hover:bg-sky-700 transition-colors duration-300 flex items-center justify-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-plus-circle"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="16"/><line x1="8" x2="16" y1="12" y2="12"/></svg>
+                            New Deal
+                        </button>
+                    </div>
+                </aside>
+
+                <!-- Main Content Area -->
+                <main class="flex-1 flex flex-col">
+                    <div id="welcome-view" class="flex-grow flex items-center justify-center">
+                        <div class="text-center text-slate-500">
+                            <h2 class="text-2xl font-semibold">Welcome!</h2>
+                            <p>Select a deal from the left or create a new one to get started.</p>
+                        </div>
+                    </div>
+                    <div id="deal-view" class="hidden flex-grow flex flex-col">
+                         <div class="p-4 border-b border-slate-200 bg-white flex justify-between items-center">
+                            <div>
+                                <h2 id="deal-company-name" class="text-2xl font-bold"></h2>
+                                <p class="text-slate-500 flex items-center gap-4">
+                                    <span id="deal-details-size"></span>
+                                    <span id="deal-details-date"></span>
+                                </p>
+                            </div>
+                            <div>
+                                <button id="add-contact-map-btn" class="bg-slate-700 text-white font-semibold py-2 px-4 rounded-md hover:bg-slate-800 transition-colors duration-300 flex items-center gap-2">
+                                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-user-plus"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" x2="19" y1="8" y2="14"/><line x1="22" x2="16" y1="11" y2="11"/></svg>
+                                    Add Contact
+                                </button>
+                                 <button id="add-cluster-btn" class="ml-2 bg-slate-200 text-slate-700 font-semibold py-2 px-4 rounded-md hover:bg-slate-300 transition-colors duration-300 flex items-center gap-2">
+                                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-box-select"><path d="M5 3a2 2 0 0 0-2 2v2"/><path d="M19 3a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M5 17v2a2 2 0 0 0 2 2h2"/><rect width="18" height="18" x="3" y="3" rx="2"/></svg>
+                                    New Cluster
+                                </button>
+                            </div>
+                        </div>
+                        <div id="map-canvas" class="flex-grow relative overflow-auto map-canvas">
+                            <!-- Contacts and Clusters will be rendered here -->
+                        </div>
+                    </div>
+                </main>
+            </div>
+        </div>
+    </div>
+    
+    <!-- ====================================================== -->
+    <!-- ======================= MODALS ======================= -->
+    <!-- ====================================================== -->
+
+    <!-- New Deal Modal -->
+    <div id="deal-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center modal-backdrop">
+        <div class="bg-white p-8 rounded-xl shadow-lg w-full max-w-md modal-content">
+            <h3 class="text-2xl font-bold mb-6">Create a New Deal</h3>
+            <form id="deal-form">
+                <div class="space-y-4">
+                    <input type="text" id="company-name" placeholder="Company Name" required class="w-full px-4 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-sky-500">
+                    <input type="number" id="deal-size" placeholder="Deal Size ($)" required class="w-full px-4 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-sky-500">
+                    <input type="date" id="close-date" required class="w-full px-4 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-sky-500">
+                </div>
+                <div class="mt-8 flex justify-end gap-4">
+                    <button type="button" id="cancel-deal-btn" class="px-4 py-2 bg-slate-200 rounded-md hover:bg-slate-300">Cancel</button>
+                    <button type="submit" class="px-4 py-2 bg-sky-600 text-white rounded-md hover:bg-sky-700">Create Deal</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- New/Edit Contact Modal -->
+    <div id="contact-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center modal-backdrop">
+        <div class="bg-white p-8 rounded-xl shadow-lg w-full max-w-lg modal-content">
+            <h3 id="contact-modal-title" class="text-2xl font-bold mb-6">Add New Contact</h3>
+            <form id="contact-form">
+                <input type="hidden" id="contact-id">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <input type="text" id="contact-first-name" placeholder="First Name*" required class="w-full px-4 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-sky-500">
+                    <input type="text" id="contact-last-name" placeholder="Last Name*" required class="w-full px-4 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-sky-500">
+                    <input type="text" id="contact-role" placeholder="Role*" required class="w-full md:col-span-2 px-4 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-sky-500">
+                    <input type="text" id="contact-location" placeholder="Location" class="w-full px-4 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-sky-500">
+                    <input type="email" id="contact-email" placeholder="Email" class="w-full px-4 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-sky-500">
+                    <input type="tel" id="contact-phone" placeholder="Phone" class="w-full px-4 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-sky-500">
+                    <input type="url" id="contact-linkedin" placeholder="LinkedIn URL" class="w-full md:col-span-2 px-4 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-sky-500">
+                    <input type="url" id="contact-crm" placeholder="CRM Link" class="w-full md:col-span-2 px-4 py-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-sky-500">
+                </div>
+                <div class="mt-8 flex justify-end gap-4">
+                    <button type="button" id="cancel-contact-btn" class="px-4 py-2 bg-slate-200 rounded-md hover:bg-slate-300">Cancel</button>
+                    <button type="submit" class="px-4 py-2 bg-sky-600 text-white rounded-md hover:bg-sky-700">Save Contact</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Contact Details/Tagging Modal -->
+    <div id="tagging-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center modal-backdrop">
+        <div class="bg-white p-8 rounded-xl shadow-lg w-full max-w-md modal-content">
+            <h3 class="text-2xl font-bold mb-2" id="tagging-contact-name"></h3>
+            <p class="text-slate-600 mb-6" id="tagging-contact-role"></p>
+            <div class="mb-6">
+                <h4 class="font-semibold mb-2">Assign Tags</h4>
+                <div id="tags-container" class="flex flex-wrap gap-2">
+                    <!-- Tags will be populated by JS -->
+                </div>
+            </div>
+             <div class="mb-6">
+                <h4 class="font-semibold mb-2">Actions</h4>
+                <button id="edit-contact-from-tag-modal-btn" class="text-sky-600 hover:text-sky-700 font-medium">Edit Contact Details</button>
+                <button id="delete-contact-btn" class="ml-4 text-red-600 hover:text-red-700 font-medium">Delete Contact</button>
+             </div>
+            <div class="flex justify-end">
+                <button type="button" id="close-tagging-btn" class="px-4 py-2 bg-slate-200 rounded-md hover:bg-slate-300">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase SDKs and your custom script -->
+    <script type="module" src="script.js"></script>
+
+</body>
+</html>
