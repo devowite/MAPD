@@ -7,6 +7,7 @@ import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, on
 import { getFirestore, doc, collection, addDoc, onSnapshot, updateDoc, deleteDoc, setDoc, query, where, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- Firebase Configuration ---
+// Your Firebase Configuration from the Firebase Console (Step 2 of the guide)
 const firebaseConfig = {
   apiKey: "AIzaSyA3dt0c_ss2nTcVIjh-m861YIS_cV6qOsI",
   authDomain: "mapd-81a18.firebaseapp.com",
@@ -61,36 +62,38 @@ const editContactFromTagModalBtn = document.getElementById('edit-contact-from-ta
 
 // --- Initialization ---
 function initializeFirebase() {
+    console.log("Attempting to initialize Firebase...");
     // Check if Firebase config is provided. If not, show an error.
-    if (Object.keys(firebaseConfig).length === 0) {
-         console.error("Firebase config is missing. Please add it to the script.");
-         authError.textContent = "Application is not configured. Please contact the administrator.";
+    if (!firebaseConfig || !firebaseConfig.apiKey) {
+         console.error("Firebase config is missing or incomplete in script.js. Please add it from your Firebase project settings.");
+         authError.textContent = "Application is not configured correctly. Please check the console for errors.";
          authError.classList.remove('hidden');
          return;
     }
     app = initializeApp(firebaseConfig);
     db = getFirestore(app);
     auth = getAuth(app);
+    console.log("Firebase initialized successfully.");
     setupAuthListener();
 }
 
 // --- Authentication ---
 // Sets up a listener that triggers whenever the user's login state changes.
 function setupAuthListener() {
+    console.log("Setting up auth state listener...");
     onAuthStateChanged(auth, async (user) => {
         if (user) {
-            // If user is logged in, store their ID and show the main app.
+            console.log("User is signed in:", user.uid);
             userId = user.uid;
             document.getElementById('user-id-display').textContent = `User ID: ${userId}`;
             showAppScreen();
             fetchDeals();
         } else {
-            // If no user, handle different sign-in scenarios for the environment.
+             console.log("No user is signed in.");
             if (__initial_auth_token_string) {
                 try {
                     await signInWithCustomToken(auth, __initial_auth_token_string);
                 } catch (error) {
-                    console.error("Custom token sign-in failed, trying anonymous:", error);
                     await signInAnonymously(auth);
                 }
             } else {
@@ -103,17 +106,23 @@ function setupAuthListener() {
 // Handles the sign-up / sign-in form submission.
 authForm.addEventListener('submit', (e) => {
     e.preventDefault();
+    console.log("Authentication form submitted.");
     const email = document.getElementById('email').value;
     const password = document.getElementById('password').value;
     const isSignUp = authToggleButton.textContent === 'Sign In';
 
-    // Determines whether to create a new user or sign in an existing one.
-    const action = isSignUp 
-        ? createUserWithEmailAndPassword(auth, email, password)
-        : signInWithEmailAndPassword(auth, email, password);
+    let action;
+    if (isSignUp) {
+        console.log("Attempting to create a new user...");
+        action = createUserWithEmailAndPassword(auth, email, password);
+    } else {
+        console.log("Attempting to sign in...");
+        action = signInWithEmailAndPassword(auth, email, password);
+    }
 
     action.catch(error => {
-        authError.textContent = error.message;
+        console.error("Authentication Error:", error.code, error.message);
+        authError.textContent = `Error: ${error.message}`;
         authError.classList.remove('hidden');
     });
 });
@@ -140,11 +149,9 @@ logoutButton.addEventListener('click', () => {
 function showAuthScreen() {
     authScreen.classList.remove('hidden');
     appScreen.classList.add('hidden');
-    // Unsubscribe from real-time listeners to prevent memory leaks.
     if (unsubscribeDeals) unsubscribeDeals();
     if (unsubscribeContacts) unsubscribeContacts();
     if (unsubscribeClusters) unsubscribeClusters();
-    // Clear all dynamic content.
     dealsList.innerHTML = '';
     mapCanvas.innerHTML = '';
     dealView.classList.add('hidden');
@@ -162,18 +169,18 @@ function showAppScreen() {
 }
 
 // --- Deals Logic ---
-// Fetches all deals for the current user from Firestore in real-time.
 function fetchDeals() {
     if (!userId) return;
-    if (unsubscribeDeals) unsubscribeDeals(); // Prevent multiple listeners
+    if (unsubscribeDeals) unsubscribeDeals();
     const dealsCollection = collection(db, `artifacts/${appId}/users/${userId}/deals`);
     unsubscribeDeals = onSnapshot(dealsCollection, (snapshot) => {
         const deals = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         renderDeals(deals);
+    }, (error) => {
+        console.error("Error fetching deals:", error);
     });
 }
 
-// Renders the list of deals in the sidebar.
 function renderDeals(deals) {
     dealsList.innerHTML = '';
     if (deals.length === 0) {
@@ -181,7 +188,6 @@ function renderDeals(deals) {
     } else {
          deals.forEach(deal => {
             const dealEl = document.createElement('div');
-            // Highlight the currently selected deal
             dealEl.className = `p-3 rounded-md cursor-pointer mb-2 ${deal.id === currentDealId ? 'bg-sky-100 text-sky-800' : 'hover:bg-slate-100'}`;
             dealEl.dataset.id = deal.id;
             dealEl.innerHTML = `
@@ -194,23 +200,17 @@ function renderDeals(deals) {
     }
 }
 
-// Handles selecting a deal from the list.
 function selectDeal(deal) {
     currentDealId = deal.id;
     welcomeView.classList.add('hidden');
     dealView.classList.remove('hidden');
-    // Update header with deal info
     document.getElementById('deal-company-name').textContent = deal.companyName;
     document.getElementById('deal-details-size').textContent = `Deal Size: ${new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(deal.dealSize)}`;
     document.getElementById('deal-details-date').textContent = `Close Date: ${deal.closeDate}`;
-
-    // Fetch the contacts and clusters for this specific deal.
     fetchContactsAndClusters(currentDealId);
-    // Re-render the deals list to update the highlighting.
     fetchDeals(); 
 }
 
-// --- Modal Controls for Deals ---
 addDealBtn.addEventListener('click', () => { dealModal.classList.add('flex'); dealModal.classList.remove('hidden'); });
 cancelDealBtn.addEventListener('click', () => { dealModal.classList.remove('flex'); dealModal.classList.add('hidden'); });
 dealForm.addEventListener('submit', async (e) => {
@@ -230,27 +230,22 @@ dealForm.addEventListener('submit', async (e) => {
 });
 
 // --- Contacts & Clusters Logic ---
-// Fetches all contacts and clusters for the currently selected deal.
 function fetchContactsAndClusters(dealId) {
     if (!userId) return;
     if (unsubscribeContacts) unsubscribeContacts();
     if (unsubscribeClusters) unsubscribeClusters();
 
-    let currentClusters = []; // Local cache of clusters
+    let currentClusters = [];
 
-    // Listen for real-time updates to contacts
     const contactsCollection = collection(db, `artifacts/${appId}/users/${userId}/deals/${dealId}/contacts`);
     unsubscribeContacts = onSnapshot(contactsCollection, (snapshot) => {
         const contacts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        // Re-render the map with fresh contact data, using the cached cluster data
         renderMapElements(contacts, currentClusters);
     });
 
-    // Listen for real-time updates to clusters
     const clustersCollection = collection(db, `artifacts/${appId}/users/${userId}/deals/${dealId}/clusters`);
     unsubscribeClusters = onSnapshot(clustersCollection, (snapshot) => {
         currentClusters = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        // To re-render, we need the latest contacts as well. We'll query them once.
          const contactsQuery = query(collection(db, `artifacts/${appId}/users/${userId}/deals/${dealId}/contacts`));
          getDocs(contactsQuery).then(contactSnapshot => {
             const contacts = contactSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -259,11 +254,9 @@ function fetchContactsAndClusters(dealId) {
     });
 }
 
-// Renders all elements (clusters and contacts) onto the map canvas.
 function renderMapElements(contacts = [], clusters = []) {
-    mapCanvas.innerHTML = ''; // Clear canvas before re-rendering
+    mapCanvas.innerHTML = ''; 
     
-    // Render clusters first so they are in the background
     clusters.forEach(cluster => {
         const clusterEl = document.createElement('div');
         clusterEl.id = `cluster-${cluster.id}`;
@@ -281,14 +274,12 @@ function renderMapElements(contacts = [], clusters = []) {
         mapCanvas.appendChild(clusterEl);
     });
 
-    // Then render contacts on top
     contacts.forEach(contact => {
         const contactEl = createContactBubble(contact);
         mapCanvas.appendChild(contactEl);
     });
 }
 
-// Creates the HTML element for a single contact bubble.
 function createContactBubble(contact) {
     const contactEl = document.createElement('div');
     contactEl.id = `contact-${contact.id}`;
@@ -308,13 +299,11 @@ function createContactBubble(contact) {
 
     contactEl.addEventListener('dragstart', handleDragStart);
     contactEl.addEventListener('click', (e) => {
-        // This check prevents the click event from firing after a drag action.
         if(e.detail > 0) openTaggingModal(contact);
     });
     return contactEl;
 }
 
-// --- Modal Controls for Contacts ---
 addContactMapBtn.addEventListener('click', () => openContactModal());
 cancelContactBtn.addEventListener('click', () => { contactModal.classList.remove('flex'); contactModal.classList.add('hidden'); });
 
@@ -324,7 +313,6 @@ function openContactModal(contact = null, position = null) {
     const modalTitle = document.getElementById('contact-modal-title');
 
     if (contact) {
-        // If a contact object is passed, populate the form for editing.
         modalTitle.textContent = "Edit Contact";
         contactIdInput.value = contact.id;
         document.getElementById('contact-first-name').value = contact.firstName || '';
@@ -336,12 +324,10 @@ function openContactModal(contact = null, position = null) {
         document.getElementById('contact-linkedin').value = contact.linkedin || '';
         document.getElementById('contact-crm').value = contact.crmLink || '';
     } else {
-        // Otherwise, prepare the form for creating a new contact.
         modalTitle.textContent = "Add New Contact";
         contactIdInput.value = '';
     }
 
-    // Set a default random position for new contacts.
     contactForm.dataset.positionX = position ? position.x : Math.round(10 + Math.random() * 400);
     contactForm.dataset.positionY = position ? position.y : Math.round(10 + Math.random() * 300);
 
@@ -349,7 +335,6 @@ function openContactModal(contact = null, position = null) {
     contactModal.classList.remove('hidden');
 }
 
-// Handles submission of the new/edit contact form.
 contactForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     if (!userId || !currentDealId) return;
@@ -369,15 +354,10 @@ contactForm.addEventListener('submit', async (e) => {
     const contactsCollection = collection(db, `artifacts/${appId}/users/${userId}/deals/${currentDealId}/contacts`);
 
     if (contactId) {
-        // If an ID exists, update the existing document.
         const contactDoc = doc(db, `artifacts/${appId}/users/${userId}/deals/${currentDealId}/contacts`, contactId);
         await updateDoc(contactDoc, contactData);
     } else {
-        // Otherwise, create a new document.
-        contactData.position = {
-            x: parseInt(contactForm.dataset.positionX),
-            y: parseInt(contactForm.dataset.positionY)
-        };
+        contactData.position = { x: parseInt(contactForm.dataset.positionX), y: parseInt(contactForm.dataset.positionY) };
         contactData.tags = [];
         await addDoc(contactsCollection, contactData);
     }
@@ -387,24 +367,20 @@ contactForm.addEventListener('submit', async (e) => {
 });
         
 // --- Drag and Drop Logic ---
-// Fired when the user starts dragging a contact bubble.
 function handleDragStart(e) {
     draggedElement = e.target.closest('.contact-bubble');
     e.dataTransfer.setData('text/plain', draggedElement.dataset.id);
     e.dataTransfer.effectAllowed = 'move';
-    // Use a small timeout to apply styling *after* the browser creates the drag image.
     setTimeout(() => {
         draggedElement.classList.add('dragging');
     }, 0);
 }
 
-// Allows the map canvas to be a valid drop target.
 mapCanvas.addEventListener('dragover', (e) => {
     e.preventDefault(); 
     e.dataTransfer.dropEffect = 'move';
 });
 
-// Fired when the user drops the contact bubble.
 mapCanvas.addEventListener('drop', async (e) => {
     e.preventDefault();
     if (!draggedElement) return;
@@ -414,33 +390,28 @@ mapCanvas.addEventListener('drop', async (e) => {
     const contactId = e.dataTransfer.getData('text/plain');
     const canvasRect = mapCanvas.getBoundingClientRect();
     
-    // Calculate position relative to the canvas, accounting for scroll.
     let x = e.clientX - canvasRect.left + mapCanvas.scrollLeft;
     let y = e.clientY - canvasRect.top + mapCanvas.scrollTop;
 
-    // Check if the drop target is a cluster.
     const targetCluster = document.elementsFromPoint(e.clientX, e.clientY).find(el => el.classList.contains('cluster'));
     let clusterId = null;
 
     if (targetCluster) {
-        // If dropped on a cluster, update clusterId and adjust position to be inside it.
         clusterId = targetCluster.id.replace('cluster-', '');
         const clusterRect = targetCluster.getBoundingClientRect();
         x = e.clientX - clusterRect.left + targetCluster.offsetLeft + 10;
         y = e.clientY - clusterRect.top + targetCluster.offsetTop + 10;
     }
 
-    // Update the contact's position in Firestore.
     const contactDoc = doc(db, `artifacts/${appId}/users/${userId}/deals/${currentDealId}/contacts`, contactId);
     await updateDoc(contactDoc, {
         position: { x: Math.round(x), y: Math.round(y) },
-        clusterId: clusterId // Note: this field is saved but not yet used for snapping.
+        clusterId: clusterId
     });
 
     draggedElement = null;
 });
 
-// Cleans up styles after the drag operation ends.
 mapCanvas.addEventListener('dragend', () => {
      if(draggedElement) {
         draggedElement.classList.remove('dragging');
@@ -449,13 +420,11 @@ mapCanvas.addEventListener('dragend', () => {
 });
 
 // --- Tagging Modal ---
-// Opens the modal for viewing contact details and assigning tags.
 function openTaggingModal(contact) {
     taggingModal.dataset.contactId = contact.id;
     document.getElementById('tagging-contact-name').textContent = `${contact.firstName} ${contact.lastName}`;
     document.getElementById('tagging-contact-role').textContent = contact.role;
     
-    // Dynamically create tag buttons and highlight selected ones.
     tagsContainer.innerHTML = '';
     allTags.forEach(tag => {
         const isSelected = (contact.tags || []).includes(tag);
@@ -471,34 +440,30 @@ function openTaggingModal(contact) {
         tagsContainer.appendChild(tagButton);
     });
     
-    // Set up action buttons in the modal.
     editContactFromTagModalBtn.onclick = () => {
         taggingModal.classList.remove('flex');
         taggingModal.classList.add('hidden');
-        openContactModal(contact); // Open the edit contact modal
+        openContactModal(contact);
     };
 
     deleteContactBtn.onclick = async () => {
-         // Replace window.confirm with a custom modal in a real app.
-         if(window.confirm("Are you sure you want to delete this contact? This cannot be undone.")){
-            const contactDoc = doc(db, `artifacts/${appId}/users/${userId}/deals/${currentDealId}/contacts`, contact.id);
-            await deleteDoc(contactDoc);
-            taggingModal.classList.remove('flex');
-            taggingModal.classList.add('hidden');
-         }
+        // NOTE: The confirmation dialog was removed to prevent issues in iframe environments.
+        // Consider adding a custom modal for confirmation in a production app.
+        const contactDoc = doc(db, `artifacts/${appId}/users/${userId}/deals/${currentDealId}/contacts`, contact.id);
+        await deleteDoc(contactDoc);
+        taggingModal.classList.remove('flex');
+        taggingModal.classList.add('hidden');
     };
     
     taggingModal.classList.add('flex');
     taggingModal.classList.remove('hidden');
 }
 
-// Toggles a tag on a contact and updates Firestore.
 async function toggleTag(tag) {
     const contactId = taggingModal.dataset.contactId;
     const contactDocRef = doc(db, `artifacts/${appId}/users/${userId}/deals/${currentDealId}/contacts`, contactId);
     const button = tagsContainer.querySelector(`[data-tag="${tag}"]`);
 
-    // Get the latest contact data to avoid race conditions.
     const contactsQuery = query(collection(db, `artifacts/${appId}/users/${userId}/deals/${currentDealId}/contacts`));
     const contactSnapshot = await getDocs(contactsQuery);
     const contacts = contactSnapshot.docs.map(d => ({id: d.id, ...d.data()}));
@@ -506,11 +471,9 @@ async function toggleTag(tag) {
 
     let currentTags = contact.tags || [];
     if (currentTags.includes(tag)) {
-        // Remove tag
         currentTags = currentTags.filter(t => t !== tag);
         button.className = 'px-3 py-1 rounded-full text-sm font-medium transition-colors bg-slate-200 text-slate-700 hover:bg-slate-300';
     } else {
-        // Add tag
         currentTags.push(tag);
         button.className = 'px-3 py-1 rounded-full text-sm font-medium transition-colors bg-sky-600 text-white';
     }
@@ -523,22 +486,18 @@ closeTaggingBtn.addEventListener('click', () => {
 });
 
 // --- Cluster Logic ---
-// Creates a new cluster on the map.
 addClusterBtn.addEventListener('click', async () => {
     if (!userId || !currentDealId) return;
 
-    // Use a simple prompt for the MVP. A custom modal would be better in a production app.
     const clusterName = window.prompt("Enter a name for the new cluster (e.g., 'IT Department'):");
     if (clusterName) {
         const clustersCollection = collection(db, `artifacts/${appId}/users/${userId}/deals/${currentDealId}/clusters`);
         await addDoc(clustersCollection, {
             name: clusterName,
-            // Stagger new clusters vertically to prevent them from overlapping initially.
             position: { x: 50, y: 50 + (document.querySelectorAll('.cluster').length * 250) } 
         });
     }
 });
 
 // --- App Entry Point ---
-// This starts the entire application.
 initializeFirebase();
