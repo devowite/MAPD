@@ -1,0 +1,42 @@
+/* Sets the default font for the entire application */
+body { 
+    font-family: 'Inter', sans-serif; 
+}
+
+/* Creates a grid background for the canvas to help with alignment */
+.map-canvas { 
+    background-image: radial-gradient(#cbd5e1 1px, transparent 1px); 
+    background-size: 20px 20px; 
+}
+
+/* Changes the cursor to indicate that contact bubbles can be grabbed */
+.contact-bubble { 
+    cursor: grab; 
+}
+
+/* Changes the cursor while a contact bubble is being actively dragged */
+.contact-bubble:active { 
+    cursor: grabbing; 
+    z-index: 1000; /* Ensures the dragged item appears above others */
+}
+
+/* Styles the cluster containers with a dashed border */
+.cluster { 
+    border: 2px dashed #94a3b8; 
+}
+
+/* Adds a simple fade-in transition for modal backdrops */
+.modal-backdrop { 
+    transition: opacity 0.3s ease-in-out; 
+}
+
+/* Adds a slide-up transition for the modal content itself */
+.modal-content { 
+    transition: transform 0.3s ease-in-out; 
+}
+
+/* Styles the appearance of an element while it is being dragged */
+.dragging { 
+    opacity: 0.5; 
+    border: 2px dashed #0ea5e9; 
+}
