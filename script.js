@@ -7,10 +7,15 @@ import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, on
 import { getFirestore, doc, collection, addDoc, onSnapshot, updateDoc, deleteDoc, setDoc, query, where, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- Firebase Configuration ---
-// IMPORTANT: Replace this with your actual Firebase config object.
-// It is provided to you when you create a web app in the Firebase console.
-const __firebase_config_string = typeof __firebase_config !== 'undefined' ? __firebase_config : '{}';
-const firebaseConfig = JSON.parse(__firebase_config_string);
+const firebaseConfig = {
+  apiKey: "AIzaSyA3dt0c_ss2nTcVIjh-m861YIS_cV6qOsI",
+  authDomain: "mapd-81a18.firebaseapp.com",
+  projectId: "mapd-81a18",
+  storageBucket: "mapd-81a18.firebasestorage.app",
+  messagingSenderId: "408721995452",
+  appId: "1:408721995452:web:069cec020a2936759942b9",
+  measurementId: "G-11S1KJ5P07"
+};
 
 // This ID is provided by the canvas environment. For local dev, you can use a default.
 const appId = typeof __app_id !== 'undefined' ? __app_id : 'stakeholder-map-mvp-local';
