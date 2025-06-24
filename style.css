@@ -10,7 +10,7 @@ body {
 /* Base style for contact bubbles */
 .contact-bubble { 
     cursor: grab; 
-    transition: width 0.2s ease, height 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+    transition: width 0.2s ease, height 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease, border-color 0.2s ease, background-color 0.2s ease;
     display: flex;
     flex-direction: column;
     justify-content: center;
@@ -19,7 +19,9 @@ body {
     padding: 8px; /* Adjusted padding */
     position: absolute;
     z-index: 10;
+    border: 2px solid transparent;
 }
+
 
 .contact-bubble:active { 
     cursor: grabbing; 
@@ -41,6 +43,29 @@ body {
     box-shadow: 0 0 0 4px #38bdf8; /* Blue ring */
     z-index: 999;
 }
+
+/* Sentiment-based styles for contact bubbles */
+.contact-bubble.supporter {
+    border-color: #22c55e; /* green-500 */
+    background-color: rgba(74, 222, 128, 0.1); /* green-400 with opacity */
+}
+
+.contact-bubble.detractor {
+    border-color: #ef4444; /* red-500 */
+    background-color: rgba(248, 113, 113, 0.1); /* red-400 with opacity */
+}
+
+/* Styling for 'Contacted' Lens */
+.contact-bubble.contacted-yes {
+    border-color: #22c55e; /* green-500 */
+    background-color: rgba(74, 222, 128, 0.1);
+}
+
+.contact-bubble.contacted-no {
+    border-color: #ef4444; /* red-500 */
+    background-color: rgba(248, 113, 113, 0.1);
+}
+
 
 /* Action menus for the selected contact */
 .actions-top, .actions-bottom {
@@ -135,7 +160,7 @@ body {
 
 
 /* Style for the tags dropdown menu */
-.tags-dropdown {
+.tags-dropdown, .sentiment-dropdown {
     position: absolute;
     background-color: white;
     border-radius: 8px;
@@ -147,18 +172,18 @@ body {
     gap: 2px;
 }
 
-.tag-dropdown-item {
+.tag-dropdown-item, .sentiment-dropdown-item {
     padding: 8px 12px;
     border-radius: 6px;
     cursor: pointer;
     font-size: 14px;
 }
 
-.tag-dropdown-item:hover {
+.tag-dropdown-item:hover, .sentiment-dropdown-item:hover {
     background-color: #f1f5f9;
 }
 
-.tag-dropdown-item.selected {
+.tag-dropdown-item.selected, .sentiment-dropdown-item.selected {
     background-color: #0284c7;
     color: white;
 }
