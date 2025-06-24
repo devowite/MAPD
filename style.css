@@ -3,40 +3,216 @@ body {
     font-family: 'Inter', sans-serif; 
 }
 
-/* Creates a grid background for the canvas to help with alignment */
 .map-canvas { 
-    background-image: radial-gradient(#cbd5e1 1px, transparent 1px); 
-    background-size: 20px 20px; 
+    /* The grid is removed for a cleaner look */
 }
 
-/* Changes the cursor to indicate that contact bubbles can be grabbed */
+/* Base style for contact bubbles */
 .contact-bubble { 
     cursor: grab; 
+    transition: width 0.2s ease, height 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    padding: 8px; /* Adjusted padding */
+    position: absolute;
+    z-index: 10;
 }
 
-/* Changes the cursor while a contact bubble is being actively dragged */
 .contact-bubble:active { 
     cursor: grabbing; 
-    z-index: 1000; /* Ensures the dragged item appears above others */
+    z-index: 1000;
 }
 
-/* Styles the cluster containers with a dashed border */
+/* Style for when an element is being dragged */
+.dragging { 
+    opacity: 0.9; 
+    border: 2px dashed #0ea5e9; 
+    z-index: 1000;
+    transform: scale(1.05);
+    box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+    user-select: none; /* Add this line to prevent highlighting */
+}
+
+/* Highlight style for the selected contact */
+.contact-bubble.selected {
+    box-shadow: 0 0 0 4px #38bdf8; /* Blue ring */
+    z-index: 999;
+}
+
+/* Action menus for the selected contact */
+.actions-top, .actions-bottom {
+    display: none; /* Hidden by default */
+    position: absolute;
+    width: 100%;
+    justify-content: center;
+    gap: 8px;
+}
+
+.actions-top {
+    top: -35px;
+}
+
+.actions-bottom {
+    bottom: -35px;
+}
+
+/* Show action menus when a contact is selected */
+.contact-bubble.selected .actions-top,
+.contact-bubble.selected .actions-bottom {
+    display: flex;
+}
+
+/* Style for individual action buttons */
+.action-btn {
+    background-color: white;
+    border: 1px solid #cbd5e1;
+    border-radius: 50%;
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.action-btn:hover {
+    background-color: #f1f5f9;
+}
+
+/* Style for cluster containers */
 .cluster { 
     border: 2px dashed #94a3b8; 
+    cursor: grab;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+    position: absolute;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.cluster:active {
+    cursor: grabbing;
+    z-index: 990;
+}
+.cluster.selected {
+    border-color: #38bdf8;
+    border-style: solid;
+    box-shadow: 0 0 0 4px #38bdf840;
 }
 
-/* Adds a simple fade-in transition for modal backdrops */
-.modal-backdrop { 
-    transition: opacity 0.3s ease-in-out; 
+.cluster .cluster-name {
+    position: absolute;
+    top: -16px; /* Adjust to position outside the border */
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: #f1f5f9; /* Match body background */
+    padding: 2px 12px;
+    border-radius: 16px;
+    font-weight: 600;
+    color: #475569;
+    white-space: nowrap;
+    border: 1px solid #e2e8f0;
 }
 
-/* Adds a slide-up transition for the modal content itself */
-.modal-content { 
-    transition: transform 0.3s ease-in-out; 
+.cluster-actions {
+    display: none;
+    position: absolute;
+    top: -35px;
+    left: 50%;
+    transform: translateX(-50%);
+    gap: 8px;
+    z-index: 1;
 }
 
-/* Styles the appearance of an element while it is being dragged */
-.dragging { 
-    opacity: 0.5; 
-    border: 2px dashed #0ea5e9; 
+.cluster.selected .cluster-actions {
+    display: flex;
+}
+
+
+/* Style for the tags dropdown menu */
+.tags-dropdown {
+    position: absolute;
+    background-color: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    z-index: 1001;
+    padding: 4px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.tag-dropdown-item {
+    padding: 8px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.tag-dropdown-item:hover {
+    background-color: #f1f5f9;
+}
+
+.tag-dropdown-item.selected {
+    background-color: #0284c7;
+    color: white;
+}
+
+/* Style for the map canvas when in connecting mode */
+.map-canvas.connecting-mode {
+    cursor: crosshair;
+}
+.map-canvas.connecting-mode .contact-bubble:not(.selected) {
+    cursor: crosshair;
+}
+
+
+/* Style for connection lines */
+#line-canvas line {
+    stroke: #64748b;
+    stroke-width: 2;
+    marker-end: url(#arrowhead);
+}
+#line-canvas #arrowhead {
+    fill: #64748b;
+}
+
+/* Cluster Resize Handles */
+.resize-handle {
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    background: #fff;
+    border: 1px solid #94a3b8;
+    border-radius: 50%;
+    z-index: 10;
+    display: none;
+}
+.cluster.selected .resize-handle {
+    display: block;
+}
+.resize-handle.se {
+    bottom: -5px;
+    right: -5px;
+    cursor: se-resize;
+}
+.resize-handle.sw {
+    bottom: -5px;
+    left: -5px;
+    cursor: sw-resize;
+}
+.resize-handle.ne {
+    top: -5px;
+    right: -5px;
+    cursor: ne-resize;
+}
+.resize-handle.nw {
+    top: -5px;
+    left: -5px;
+    cursor: nw-resize;
 }
