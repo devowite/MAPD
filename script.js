@@ -29,8 +29,11 @@ let allContacts = [], allClusters = [], allLinks = [];
 let isConnecting = false;
 let sourceNodeForLink = null;
 let selectedContactId = null;
+let currentLens = 'None';
 
-const allTags = ['Champion', 'Economic Buyer', 'Detractor', 'Supporter', 'Legal Contact', 'IT Contact', 'Security Contact', 'End User'];
+const allTags = ['Champion', 'Economic Buyer', 'Legal Contact', 'IT Contact', 'Security Contact', 'End User'];
+const allSentiments = ['Supporter', 'Neutral', 'Detractor'];
+
 
 // --- DOM Elements ---
 const authScreen = document.getElementById('auth-screen');
@@ -53,6 +56,7 @@ const contactModal = document.getElementById('contact-modal');
 const contactForm = document.getElementById('contact-form');
 const cancelContactBtn = document.getElementById('cancel-contact-btn');
 const addClusterBtn = document.getElementById('add-cluster-btn');
+const lensSelect = document.getElementById('lens-select');
 
 // --- Initialization ---
 function initializeFirebase() {
@@ -65,6 +69,13 @@ function initializeFirebase() {
     auth = getAuth(app);
     setupAuthListener();
 }
+
+// --- Event Listeners ---
+lensSelect.addEventListener('change', (e) => {
+    currentLens = e.target.value;
+    renderMapElements(); // Re-render to apply the new lens
+});
+
 
 // --- Authentication ---
 function setupAuthListener() {
@@ -201,18 +212,21 @@ function selectDeal(deal) {
     // 1. Set the new currentDealId
     currentDealId = deal.id;
 
-    // 2. Display the details for the selected deal
+    // 2. Reset the lens to default
+    currentLens = 'None';
+    lensSelect.value = 'None';
+
+    // 3. Display the details for the selected deal
     welcomeView.classList.add('hidden');
     dealView.classList.remove('hidden');
     document.getElementById('deal-company-name').textContent = deal.companyName;
     document.getElementById('deal-details-size').textContent = `Deal Size: ${new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(deal.dealSize)}`;
     document.getElementById('deal-details-date').textContent = `Close Date: ${deal.closeDate}`;
     
-    // 3. Fetch the contacts for the deal
+    // 4. Fetch the contacts for the deal
     fetchContactsAndClusters(currentDealId);
     
-    // 4. Manually update the highlighting on the deals list
-    // This avoids re-rendering and losing data.
+    // 5. Manually update the highlighting on the deals list
     Array.from(dealsList.querySelectorAll('.deal-item')).forEach(el => {
         if (el.dataset.id === currentDealId) {
             el.classList.add('bg-sky-100', 'text-sky-800');
@@ -299,24 +313,19 @@ function renderMapElements() {
         let contactEl = document.getElementById(`contact-${contact.id}`);
 
         if (!contactEl) {
-            // This contact is new, so create and append it
             contactEl = createContactBubble(contact);
             mapCanvas.appendChild(contactEl);
         } else {
-            // The contact already exists on the screen. Let's update it.
-            // We'll avoid touching the position if the user is currently dragging it.
+            // Update existing contact
             if (!contactEl.classList.contains('dragging')) {
                 contactEl.style.left = `${contact.position.x}px`;
                 contactEl.style.top = `${contact.position.y}px`;
             }
-
-            // Update size based on influence
             const influence = contact.influence || 3;
             const size = 60 + (influence * 20);
             contactEl.style.width = `${size}px`;
             contactEl.style.height = `${size}px`;
             
-            // Update inner HTML content (name, role, tags)
             const scaleFactor = 1 + ((influence - 3) * 0.1);
             const nameSize = 14 * scaleFactor;
             const roleSize = 12 * scaleFactor;
@@ -331,25 +340,38 @@ function renderMapElements() {
             contactEl.querySelector('.text-slate-600').textContent = contact.role;
             contactEl.querySelector('.text-center').innerHTML = tagsHtml;
         }
-    });
 
-    // 2. Remove contacts that are on the canvas but no longer in the data
-    canvasContactIds.forEach(id => {
-        if (!dataContactIds.has(id)) {
-            const elToRemove = document.getElementById(`contact-${id}`);
-            if (elToRemove) {
-                elToRemove.remove();
+        // Lens-based coloring
+        contactEl.classList.remove('supporter', 'detractor', 'contacted-yes', 'contacted-no');
+        if (currentLens === 'Support') {
+            if (contact.sentiment === 'Supporter') {
+                contactEl.classList.add('supporter');
+            } else if (contact.sentiment === 'Detractor') {
+                contactEl.classList.add('detractor');
+            }
+        } else if (currentLens === 'Contacted') {
+            if (contact.contacted) {
+                contactEl.classList.add('contacted-yes');
+            } else {
+                contactEl.classList.add('contacted-no');
             }
         }
     });
+
+    // 2. Remove old contacts
+    canvasContactIds.forEach(id => {
+        if (!dataContactIds.has(id)) {
+            const elToRemove = document.getElementById(`contact-${id}`);
+            if (elToRemove) elToRemove.remove();
+        }
+    });
     
-    // (This same logic should be applied to clusters as well)
-    // For now, we leave the cluster logic as-is to focus on the primary problem.
+    // 3. Render Clusters
     mapCanvas.querySelectorAll('.cluster').forEach(el => el.remove());
     allClusters.forEach(cluster => mapCanvas.appendChild(createClusterElement(cluster)));
 
 
-    // 3. Redraw the connection lines
+    // 4. Redraw lines
     drawConnectionLines();
 }
 
@@ -414,6 +436,7 @@ function createContactBubble(contact) {
         <div class="actions-bottom">
             <button class="action-btn" data-action="edit" title="Edit Contact">✏️</button>
             <button class="action-btn" data-action="connect" title="Connect to Manager">🔗</button>
+            <button class="action-btn" data-action="sentiment" title="Set Sentiment">👍</button>
             <button class="action-btn" data-action="delete" title="Delete Contact">❌</button>
         </div>
     `;
@@ -432,6 +455,7 @@ function handleActionClick(actionButton, element) {
             case 'influence-up': updateInfluence(id, 1); break;
             case 'influence-down': updateInfluence(id, -1); break;
             case 'toggle-tags': showTagsDropdown(contact, actionButton); break;
+            case 'sentiment': showSentimentDropdown(contact, actionButton); break;
             case 'edit': openContactModal(contact); break;
             case 'connect': initiateConnection(id); break;
             case 'delete': deleteContact(id); break;
@@ -489,6 +513,36 @@ function showTagsDropdown(contact, button) {
     dropdown.style.left = `${btnRect.left - canvasRect.left}px`;
     dropdown.style.top = `${btnRect.bottom - canvasRect.top + 5}px`;
 }
+
+function showSentimentDropdown(contact, button) {
+    const existingDropdown = document.getElementById('sentiment-dropdown');
+    if (existingDropdown) existingDropdown.remove();
+
+    const dropdown = document.createElement('div');
+    dropdown.id = 'sentiment-dropdown';
+    dropdown.className = 'sentiment-dropdown';
+    
+    allSentiments.forEach(sentiment => {
+        const item = document.createElement('div');
+        item.className = `sentiment-dropdown-item ${contact.sentiment === sentiment ? 'selected' : ''}`;
+        item.textContent = sentiment;
+        item.onclick = () => setSentiment(contact.id, sentiment);
+        dropdown.appendChild(item);
+    });
+
+    mapCanvas.appendChild(dropdown);
+    const btnRect = button.getBoundingClientRect();
+    const canvasRect = mapCanvas.getBoundingClientRect();
+    dropdown.style.left = `${btnRect.left - canvasRect.left}px`;
+    dropdown.style.top = `${btnRect.bottom - canvasRect.top + 5}px`;
+}
+
+async function setSentiment(contactId, sentiment) {
+    await updateDoc(doc(db, `artifacts/${appId}/users/${userId}/deals/${currentDealId}/contacts`, contactId), { sentiment: sentiment });
+    const dropdown = document.getElementById('sentiment-dropdown');
+    if (dropdown) dropdown.remove();
+}
+
 
 async function deleteContact(contactId) {
     if (window.confirm('Are you sure you want to delete this contact?')) {
@@ -550,15 +604,12 @@ function drawConnectionLines() {
 }
 
 // --- CORRECTED Drag and Selection Logic ---
-// This block provides the functions needed for dragging and dropping elements.
 const dragState = {
     isMouseDown: false,
     isDragging: false,
     node: null,
-    startX: 0,
-    startY: 0,
-    offsetX: 0,
-    offsetY: 0
+    initialPositions: new Map(),
+    mouseStart: { x: 0, y: 0 },
 };
 
 function dragStartHandler(e) {
@@ -697,8 +748,10 @@ function deselectAll(keepDropdown = false) {
     document.querySelectorAll('.contact-bubble.selected, .cluster.selected').forEach(el => el.classList.remove('selected'));
     selectedContactId = null;
     if (!keepDropdown) {
-        const existingDropdown = document.getElementById('tags-dropdown');
-        if (existingDropdown) existingDropdown.remove();
+        const tagsDropdown = document.getElementById('tags-dropdown');
+        if (tagsDropdown) tagsDropdown.remove();
+        const sentimentDropdown = document.getElementById('sentiment-dropdown');
+        if (sentimentDropdown) sentimentDropdown.remove();
     }
 }
 
@@ -720,6 +773,8 @@ addContactMapBtn.addEventListener('click', () => openContactModal());
 function openContactModal(contact = null) {
     contactForm.reset();
     document.getElementById('contact-id').value = '';
+    const contactedCheckbox = document.getElementById('contact-contacted');
+
     if (contact) {
         document.getElementById('contact-modal-title').textContent = 'Edit Contact';
         document.getElementById('contact-id').value = contact.id;
@@ -731,8 +786,10 @@ function openContactModal(contact = null) {
         document.getElementById('contact-phone').value = contact.phone;
         document.getElementById('contact-linkedin').value = contact.linkedin;
         document.getElementById('contact-crm').value = contact.crmLink;
+        contactedCheckbox.checked = contact.contacted || false;
     } else {
         document.getElementById('contact-modal-title').textContent = 'Add New Contact';
+        contactedCheckbox.checked = false;
     }
     contactModal.classList.add('flex');
     contactModal.classList.remove('hidden');
@@ -752,6 +809,7 @@ contactForm.addEventListener('submit', async (e) => {
         phone: document.getElementById('contact-phone').value,
         linkedin: document.getElementById('contact-linkedin').value,
         crmLink: document.getElementById('contact-crm').value,
+        contacted: document.getElementById('contact-contacted').checked
     };
     const contactsCollection = collection(db, `artifacts/${appId}/users/${userId}/deals/${currentDealId}/contacts`);
     if (contactId) {
@@ -764,6 +822,8 @@ contactForm.addEventListener('submit', async (e) => {
         };
         contactData.tags = [];
         contactData.influence = 3;
+        contactData.sentiment = 'Neutral';
+        contactData.contacted = false;
         await addDoc(contactsCollection, contactData);
     }
     contactModal.classList.remove('flex');
